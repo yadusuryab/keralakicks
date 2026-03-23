@@ -46,7 +46,7 @@ const inputCls = (err?: string) =>
 const OFFER_PRICE    = 1499;
 const OFFER_COD_FEE  = 100;
 const WHATSAPP_NUMBER = process.env.NEXT_PUBLIC_PHONE ?? "";
-const APP_URL         = process.env.NEXT_PUBLIC_APP_URL ?? ""; // e.g. https://yourstore.com
+const APP_URL         = process.env.NEXT_PUBLIC_BASE_URL ?? ""; // e.g. https://yourstore.com
 const APP_NAME        = process.env.NEXT_PUBLIC_APP_NAME ?? "Store";
 
 function CheckoutInner() {
@@ -96,9 +96,10 @@ function CheckoutInner() {
       if (item.size)  lines.push(`   📏 Size: ${item.size}`);
       if (item.color) lines.push(`   🎨 Colour: ${item.color}`);
       if (!isOffer)   lines.push(`   💵 ₹${item.salesPrice * item.cartQty}`);
-      // Product link
-      if (item.slug && APP_URL) {
-        lines.push(`   🔗 ${APP_URL}/products/${item.slug}`);
+      // Product link — slug preferred, _id as fallback
+      if (APP_URL) {
+        const productPath = item.slug || item._id;
+        lines.push(`   🔗 ${APP_URL}/product/${productPath}`);
       }
     });
 
@@ -256,8 +257,8 @@ function CheckoutInner() {
                         {item.color && <span className="text-[10px] text-white/40 bg-white/[0.07] px-2 py-0.5 rounded">{item.color}</span>}
                       </div>
                       {/* Product link */}
-                      {item.slug && APP_URL && (
-                        <a href={`${APP_URL}/products/${item.slug}`} target="_blank" rel="noopener noreferrer"
+                      {APP_URL && (
+                        <a href={`${APP_URL}/product/${item.slug || item._id}`} target="_blank" rel="noopener noreferrer"
                           className="inline-flex items-center gap-1 mt-1 text-[10px] text-white/30 hover:text-white/60 transition-colors">
                           <svg viewBox="0 0 12 12" fill="none" className="w-2.5 h-2.5">
                             <path d="M4 2H2a1 1 0 00-1 1v7a1 1 0 001 1h7a1 1 0 001-1V8M7 1h4m0 0v4m0-4L5 7"
