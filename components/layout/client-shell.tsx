@@ -10,12 +10,14 @@ export function ClientShell({ children }: { children: React.ReactNode }) {
   const isAdmin = pathname?.startsWith("/admin");
   const isOffer = pathname?.startsWith("/offer");
 
+  // Hide footer on admin OR offer pages
+  const hideFooter = isAdmin || isOffer;
 
   return (
     <>
       {!isAdmin && <Header />}
       <main className="flex-1">{children}</main>
-      {!isAdmin || !isOffer && <Footer />}
+      {!hideFooter && <Footer />}
       {!isAdmin && <WhatsAppButton />}
     </>
   );
