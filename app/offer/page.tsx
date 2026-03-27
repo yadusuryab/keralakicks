@@ -14,6 +14,7 @@ type Product = {
   colours?: string[];
   colors?: string[];
   brand?: { name: string; slug: string; logo?: string } | string;
+  buyOneGetOne?: boolean; // Added BOGO flag
 };
 
 // Normalise: API may return "colors" or "colours"
@@ -314,9 +315,16 @@ export default function OfferPage() {
   useEffect(() => {
     localStorage.removeItem("offerCart");
     localStorage.removeItem("offerFirst");
-    fetch("/api/product?limit=100")
+    // UPDATED: Fetch only products with buyOneGetOne enabled
+    fetch("/api/product?buyOneGetOne=true&limit=100")
       .then((r) => r.json())
-      .then((json) => { if (json.success) setProducts(json.data); setLoading(false); })
+      .then((json) => { 
+        if (json.success) {
+          console.log(`Fetched ${json.data.length} BOGO products`); // Debug log
+          setProducts(json.data);
+        }
+        setLoading(false);
+      })
       .catch(() => setLoading(false));
   }, []);
 
@@ -441,11 +449,16 @@ export default function OfferPage() {
             </div>
           )}
           <p className="text-white/25 text-[10px] font-semibold uppercase tracking-[0.12em] mb-4">
-            {loading?"Loading products…":`${filteredProducts.length} products${activeBrand!=="All"?` · ${activeBrand}`:""} · tap to select`}
+            {loading?"Loading products…":`${filteredProducts.length} BOGO products${activeBrand!=="All"?` · ${activeBrand}`:""} · tap to select`}
           </p>
           {loading ? (
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">
               {Array.from({length:10}).map((_,i)=>(<div key={i} className="rounded-2xl overflow-hidden aspect-square shimmer"/>))}
+            </div>
+          ) : filteredProducts.length === 0 ? (
+            <div className="text-center py-12">
+              <p className="text-white/40 text-sm">No BOGO products available at the moment.</p>
+              <p className="text-white/20 text-xs mt-2">Check back soon for new offers!</p>
             </div>
           ) : (
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">

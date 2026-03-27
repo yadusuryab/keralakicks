@@ -13,6 +13,7 @@ export async function GET(req: NextRequest) {
   const home     = searchParams.get('home')     === 'true'
   const featured = searchParams.get('featured') === 'true'
   const onSale   = searchParams.get('onSale')   === 'true'
+  const buyOneGetOne = searchParams.get('buyOneGetOne') === 'true'  // NEW: BOGO filter
   const excludeSoldOut = searchParams.get('excludeSoldOut') === 'true'
 
   // ── Scalar filters ─────────────────────────────────────────────────────────
@@ -74,10 +75,11 @@ export async function GET(req: NextRequest) {
     }
 
     // Boolean flags
-    if (featured)      conditions.push('featured == true')
-    if (onSale)        conditions.push('salesPrice < price')
-    if (excludeSoldOut) conditions.push('soldOut != true')
-    if (minRating > 0) conditions.push(`rating >= ${minRating}`)
+    if (featured)        conditions.push('featured == true')
+    if (onSale)          conditions.push('salesPrice < price')
+    if (buyOneGetOne)    conditions.push('buyOneGetOne == true')  // NEW: BOGO condition
+    if (excludeSoldOut)  conditions.push('soldOut != true')
+    if (minRating > 0)   conditions.push(`rating >= ${minRating}`)
 
     // ── Sort order ────────────────────────────────────────────────────────────
     let sortOrder = ''
@@ -140,6 +142,7 @@ export async function GET(req: NextRequest) {
           featured,
           soldOut,
           quantity,
+          buyOneGetOne,  // NEW: Include BOGO field
           ${categoryProjection}
           ${brandProjection}
         }
@@ -174,6 +177,7 @@ export async function GET(req: NextRequest) {
         soldOut,
         quantity,
         rating,
+        buyOneGetOne,  // NEW: Include BOGO field
         ${categoryProjection}
         ${brandProjection}
       }

@@ -134,6 +134,13 @@ export default {
       initialValue: false,
     },
     {
+      name: 'buyOneGetOne',  // NEW: Buy One Get One toggle
+      title: 'Buy One Get One (BOGO)',
+      type: 'boolean',
+      initialValue: false,
+      description: 'Toggle to enable Buy One Get One offer on this product',
+    },
+    {
       name: 'quantity',
       title: 'Stock Quantity',
       type: 'number',

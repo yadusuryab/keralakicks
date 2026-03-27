@@ -291,7 +291,7 @@ export default function OfferSecondPage() {
     const first = localStorage.getItem("offerFirst");
     if (!first) { router.replace("/offer"); return; }
     setFirstPick(JSON.parse(first));
-    fetch("/api/product?limit=100")
+    fetch("/api/product?buyOneGetOne=true&limit=100")
       .then((r) => r.json())
       .then((json) => { if (json.success) setProducts(json.data); setLoading(false); })
       .catch(() => setLoading(false));
