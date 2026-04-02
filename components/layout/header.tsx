@@ -7,7 +7,6 @@ import Brand from "../utils/brand";
 
 const NAV = [
   { name: "Home", href: "/" },
-  { name: "Track Order", href: "/track-order" },
   { name: "Policies", href: "/terms" },
 ];
 

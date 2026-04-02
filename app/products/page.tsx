@@ -25,12 +25,8 @@ function Chip({ label, onRemove }: { label: string; onRemove: () => void }) {
       animate={{ opacity: 1, scale: 1 }}
       exit={{ opacity: 0, scale: 0.85 }}
       transition={{ type: "spring", stiffness: 400, damping: 25 }}
-      className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-black tracking-wide uppercase"
-      style={{
-        background: "var(--foreground)",
-        color: "var(--sport-accent)",
-        border: "1px solid var(--sport-accent)",
-      }}
+      className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs text-white bg-black tracking-wide uppercase"
+     
     >
       {label}
       <button
@@ -174,8 +170,7 @@ function StickySearchBar({
           Filters
           {filterCount > 0 && (
             <span
-              className="w-4 h-4 text-[10px] font-black flex items-center justify-center"
-              style={{ background: "var(--foreground)", color: "var(--sport-accent)" }}
+              className="w-4 h-4 text-[10px]  flex items-center bg-black text-white justify-center"
             >
               {filterCount}
             </span>

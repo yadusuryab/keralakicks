@@ -5,6 +5,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { Zap } from 'lucide-react';
 import { Brand } from '@/components/types/brand';
+import { Button } from '../ui/button';
 
 interface BrandsGridProps {
   title?: string;
@@ -23,6 +24,8 @@ export default function BrandsGrid({
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [hoveredId, setHoveredId] = useState<string | null>(null);
+  // Tracks the tapped card on mobile (touch devices don't fire hover)
+  const [activeId, setActiveId] = useState<string | null>(null);
   const [canScrollLeft, setCanScrollLeft] = useState(false);
   const [canScrollRight, setCanScrollRight] = useState(true);
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -158,16 +161,12 @@ export default function BrandsGrid({
                   background: `linear-gradient(to ${dir === 'left' ? 'right' : 'left'}, var(--background), transparent)`,
                 }}
               />
-              <button
+              <Button
+                variant={'outline'}
                 onClick={() => scroll(dir)}
                 aria-label={`Scroll ${dir}`}
                 className={`relative z-10 ${dir === 'left' ? 'ml-1' : 'mr-1'} w-8 h-8 flex items-center justify-center
-                  transition-all duration-200`}
-                style={{
-                  border: '1px solid var(--sport-accent)',
-                  color: 'var(--sport-accent)',
-                  background: 'var(--foreground)',
-                }}
+                  transition-all duration-200 shadow-none`}
               >
                 <svg width="12" height="12" viewBox="0 0 14 14" fill="none">
                   {dir === 'left'
@@ -175,7 +174,7 @@ export default function BrandsGrid({
                     : <path d="M5 2l4 5-4 5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
                   }
                 </svg>
-              </button>
+              </Button>
             </div>
           );
         })}
@@ -191,7 +190,6 @@ export default function BrandsGrid({
             borderBottom: '1px solid var(--border)',
             borderLeft: '1px solid var(--border)',
             borderRight: '1px solid var(--border)',
-       
           }}
         >
           {loading
@@ -202,148 +200,165 @@ export default function BrandsGrid({
                   style={{ scrollSnapAlign: 'start', background: 'var(--muted)' }}
                 />
               ))
-            : brands.map((brand, idx) => (
-                <article
-                  key={brand._id}
-                  className="relative flex flex-col flex-shrink-0 w-[220px] p-5 transition-all duration-300 group cursor-pointer"
-                  style={{
-                    scrollSnapAlign: 'start',
-                    background: hoveredId === brand._id ? 'var(--foreground)' : 'var(--card)',
-                    opacity: hoveredId && hoveredId !== brand._id ? 0.45 : 1,
-                    borderRight: idx < brands.length - 1 ? '1px solid var(--border)' : 'none',
-                  }}
-                  onMouseEnter={() => setHoveredId(brand._id)}
-                  onMouseLeave={() => setHoveredId(null)}
-                >
-                  {/* Featured badge */}
-                  {brand.featured && (
-                    <span
-                      className="absolute top-3 right-3 text-[8px] font-black tracking-[0.25em] uppercase px-2 py-0.5"
-                      style={{
-                        color: 'var(--foreground)',
-                        background: 'var(--sport-accent)',
-                      }}
-                    >
-                      Featured
-                    </span>
-                  )}
+            : brands.map((brand, idx) => {
+                // A card is "highlighted" if hovered (desktop) OR tapped (mobile)
+                const isHighlighted = hoveredId === brand._id || activeId === brand._id;
+                const isDimmed = (hoveredId || activeId) && !isHighlighted;
 
-                  {/* Logo */}
-                  <div
-                    className="relative w-12 h-12 mb-5 flex items-center justify-center flex-shrink-0 overflow-hidden transition-all duration-300"
-                    style={{
-                      background: hoveredId === brand._id ? 'rgba(232,255,59,0.08)' : 'var(--muted)',
-                      border: hoveredId === brand._id
-                        ? '1px solid var(--sport-accent)'
-                        : '1px solid var(--border)',
-                    }}
+                return (
+                  <Link
+                    key={brand._id}
+                    href={`/products?brands=${brand.slug?.current}`}
                   >
-                    {brand.logo ? (
-                      <Image
-                        src={brand.logo}
-                        alt={brand.logoAlt || brand.name}
-                        fill
-                        className="object-contain p-2 transition-all duration-300"
-                        style={{
-                          filter: hoveredId === brand._id ? 'brightness(1.1)' : 'brightness(0.85)',
-                        }}
-                        sizes="48px"
-                      />
-                    ) : (
-                      <span
-                        className="text-xl font-black uppercase leading-none"
-                        style={{ color: 'var(--sport-accent)' }}
-                      >
-                        {brand.name[0]}
-                      </span>
-                    )}
-                  </div>
-
-                  {/* Body */}
-                  <div className="flex flex-col flex-1 gap-1">
-                    <h3
-                      className="text-base font-black uppercase tracking-tight leading-snug transition-colors duration-300"
+                    <article
+                      className="relative flex flex-col flex-shrink-0 w-[220px] p-5 transition-all duration-300 group cursor-pointer"
                       style={{
-                        color: hoveredId === brand._id ? 'white' : 'var(--foreground)',
+                        scrollSnapAlign: 'start',
+                        background: isHighlighted ? 'var(--foreground)' : 'var(--card)',
+                        opacity: isDimmed ? 0.45 : 1,
+                        borderRight: idx < brands.length - 1 ? '1px solid var(--border)' : 'none',
                       }}
+                      onMouseEnter={() => setHoveredId(brand._id)}
+                      onMouseLeave={() => setHoveredId(null)}
+                      // Mobile: toggle active on tap, clear on next tap elsewhere
+                      onTouchStart={() =>
+                        setActiveId((prev) => (prev === brand._id ? null : brand._id))
+                      }
                     >
-                      {brand.name}
-                    </h3>
-
-                    {(brand.country || brand.establishedYear) && (
-                      <p
-                        className="flex items-center gap-1.5 text-[10px] font-bold tracking-[0.15em] uppercase"
-                        style={{ color: 'var(--muted-foreground)' }}
-                      >
-                        {brand.country && <span>{brand.country}</span>}
-                        {brand.country && brand.establishedYear && (
-                          <span style={{ color: 'var(--border)' }}>·</span>
-                        )}
-                        {brand.establishedYear && <span>Est. {brand.establishedYear}</span>}
-                      </p>
-                    )}
-
-                    {brand.description && (
-                      <p
-                        className="mt-1.5 text-[0.78rem] leading-relaxed line-clamp-2"
-                        style={{ color: 'var(--muted-foreground)' }}
-                      >
-                        {brand.description}
-                      </p>
-                    )}
-
-                    {/* Footer */}
-                    <div
-                      className="flex items-center justify-between mt-auto pt-4"
-                      style={{ borderTop: '1px solid var(--border)' }}
-                    >
-                      <Link
-                        href={`/products?brands=${brand.slug?.current}`}
-                        className="inline-flex items-center gap-1.5 text-[9px] font-black tracking-[0.2em] uppercase
-                          transition-all duration-200 group/link hover:gap-2.5"
-                        style={{ color: 'var(--sport-accent)' }}
-                      >
-                        View Brand
-                        <svg width="12" height="12" viewBox="0 0 14 14" fill="none"
-                          className="transition-transform duration-200 group-hover/link:translate-x-0.5">
-                          <path d="M2.5 7h9M7.5 3l4 4-4 4" stroke="currentColor" strokeWidth="2"
-                            strokeLinecap="round" strokeLinejoin="round" />
-                        </svg>
-                      </Link>
-
-                      {brand.website && (
-                        <a
-                          href={brand.website}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          aria-label="Visit website"
-                          className="flex items-center justify-center w-7 h-7 transition-all duration-200"
+                      {/* Featured badge */}
+                      {brand.featured && (
+                        <span
+                          className="absolute top-3 right-3 text-[8px] font-black tracking-[0.25em] uppercase px-2 py-0.5"
                           style={{
-                            border: '1px solid var(--border)',
-                            color: 'var(--muted-foreground)',
-                          }}
-                          onMouseEnter={(e) => {
-                            (e.currentTarget as HTMLElement).style.borderColor = 'var(--sport-accent)';
-                            (e.currentTarget as HTMLElement).style.color = 'var(--sport-accent)';
-                          }}
-                          onMouseLeave={(e) => {
-                            (e.currentTarget as HTMLElement).style.borderColor = 'var(--border)';
-                            (e.currentTarget as HTMLElement).style.color = 'var(--muted-foreground)';
+                            color: 'var(--foreground)',
+                            background: 'var(--sport-accent)',
                           }}
                         >
-                          <svg width="11" height="11" viewBox="0 0 13 13" fill="none">
-                            <path
-                              d="M5 2H2a1 1 0 0 0-1 1v8a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1V8M8 1h4m0 0v4m0-4L5.5 7.5"
-                              stroke="currentColor" strokeWidth="1.4"
-                              strokeLinecap="round" strokeLinejoin="round"
-                            />
-                          </svg>
-                        </a>
+                          Featured
+                        </span>
                       )}
-                    </div>
-                  </div>
-                </article>
-              ))}
+
+                      {/* Logo — fixed height so all logos are the same size */}
+                      <div
+                        className="relative w-full mb-5 bg-black rounded flex items-center justify-center flex-shrink-0 overflow-hidden transition-all duration-300"
+                        style={{ height: '96px' }}
+                      >
+                        {brand.logo ? (
+                          <Image
+                            src={brand.logo}
+                            alt={brand.logoAlt || brand.name}
+                            fill
+                            className="object-contain p-3 transition-all duration-300"
+                            style={{
+                              filter: isHighlighted ? 'brightness(1.1)' : 'brightness(0.85)',
+                            }}
+                            sizes="220px"
+                          />
+                        ) : (
+                          <span
+                            className="text-xl font-black uppercase leading-none"
+                            style={{ color: 'var(--sport-accent)' }}
+                          >
+                            {brand.name[0]}
+                          </span>
+                        )}
+                      </div>
+
+                      {/* Body */}
+                      <div className="flex flex-col flex-1 gap-1">
+                        <h3
+                          className="text-base font-black uppercase tracking-tight leading-snug transition-colors duration-300"
+                          style={{
+                            color: isHighlighted ? 'white' : 'var(--foreground)',
+                          }}
+                        >
+                          {brand.name}
+                        </h3>
+
+                        {(brand.country || brand.establishedYear) && (
+                          <p
+                            className="flex items-center gap-1.5 text-[10px] font-bold tracking-[0.15em] uppercase"
+                            style={{ color: 'var(--muted-foreground)' }}
+                          >
+                            {brand.country && <span>{brand.country}</span>}
+                            {brand.country && brand.establishedYear && (
+                              <span style={{ color: 'var(--border)' }}>·</span>
+                            )}
+                            {brand.establishedYear && <span>Est. {brand.establishedYear}</span>}
+                          </p>
+                        )}
+
+                        {brand.description && (
+                          <p
+                            className="mt-1.5 text-[0.78rem] leading-relaxed line-clamp-2"
+                            style={{ color: 'var(--muted-foreground)' }}
+                          >
+                            {brand.description}
+                          </p>
+                        )}
+
+                        {/* Footer */}
+                        <div
+                          className="flex items-center justify-between mt-auto pt-4"
+                          style={{ borderTop: '1px solid var(--border)' }}
+                        >
+                          {/*
+                            Button text: always sport-accent,
+                            but on highlighted card force white so it's readable on the dark bg
+                          */}
+                          <Button
+                            variant={'ghost'}
+                            className="inline-flex items-center gap-1.5 text-[9px] font-black tracking-[0.2em] uppercase
+                              transition-all duration-200 hover:gap-2.5"
+                            style={{
+                              color: isHighlighted ? 'white' : 'var(--sport-accent)',
+                              // Ensure ghost hover bg doesn't hide text on dark card
+                              backgroundColor: 'transparent',
+                            }}
+                          >
+                            View Brand
+                            <svg width="12" height="12" viewBox="0 0 14 14" fill="none"
+                              className="transition-transform duration-200 group-hover:translate-x-0.5">
+                              <path d="M2.5 7h9M7.5 3l4 4-4 4" stroke="currentColor" strokeWidth="2"
+                                strokeLinecap="round" strokeLinejoin="round" />
+                            </svg>
+                          </Button>
+
+                          {brand.website && (
+                            <a
+                              href={brand.website}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              aria-label="Visit website"
+                              className="flex items-center justify-center w-7 h-7 transition-all duration-200"
+                              style={{
+                                border: '1px solid var(--border)',
+                                color: isHighlighted ? 'white' : 'var(--muted-foreground)',
+                              }}
+                              onMouseEnter={(e) => {
+                                (e.currentTarget as HTMLElement).style.borderColor = 'var(--sport-accent)';
+                                (e.currentTarget as HTMLElement).style.color = 'var(--sport-accent)';
+                              }}
+                              onMouseLeave={(e) => {
+                                (e.currentTarget as HTMLElement).style.borderColor = 'var(--border)';
+                                (e.currentTarget as HTMLElement).style.color = isHighlighted ? 'white' : 'var(--muted-foreground)';
+                              }}
+                            >
+                              <svg width="11" height="11" viewBox="0 0 13 13" fill="none">
+                                <path
+                                  d="M5 2H2a1 1 0 0 0-1 1v8a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1V8M8 1h4m0 0v4m0-4L5.5 7.5"
+                                  stroke="currentColor" strokeWidth="1.4"
+                                  strokeLinecap="round" strokeLinejoin="round"
+                                />
+                              </svg>
+                            </a>
+                          )}
+                        </div>
+                      </div>
+                    </article>
+                  </Link>
+                );
+              })}
         </div>
       </div>
 
