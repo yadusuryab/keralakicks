@@ -24,9 +24,7 @@ type MediaItem = {
     url: string;
   };
   alt?: string;
-  // For images
   hotspot?: any;
-  // For videos
   videoFile?: {
     asset: {
       url: string;
@@ -65,6 +63,16 @@ const getAspectRatioClass = (ratio?: string) => {
   }
 };
 
+// iOS Safari fix: force overflow-hidden to actually clip
+const iosSafariOverflowFix: React.CSSProperties = {
+  overflow: 'hidden',
+  // Force GPU compositing layer — makes overflow-hidden clip correctly on iOS
+  WebkitTransform: 'translateZ(0)',
+  transform: 'translateZ(0)',
+  // The classic iOS rounded-corner overflow fix
+  WebkitMaskImage: '-webkit-radial-gradient(white, black)',
+};
+
 const MediaContainer: React.FC<{
   media: MediaItem;
   fit?: "cover" | "contain" | "fill";
@@ -93,23 +101,14 @@ const MediaContainer: React.FC<{
   const getVideoSource = (item: MediaItem) => {
     if (item.videoUrl) {
       if (item.videoUrl.includes('youtube.com') || item.videoUrl.includes('youtu.be')) {
-        return {
-          type: 'youtube',
-          url: item.videoUrl,
-        };
+        return { type: 'youtube', url: item.videoUrl };
       }
       if (item.videoUrl.includes('vimeo.com')) {
-        return {
-          type: 'vimeo',
-          url: item.videoUrl,
-        };
+        return { type: 'vimeo', url: item.videoUrl };
       }
     }
     if (item.videoFile?.asset?.url) {
-      return {
-        type: 'file',
-        url: item.videoFile.asset.url,
-      };
+      return { type: 'file', url: item.videoFile.asset.url };
     }
     return null;
   };
@@ -122,7 +121,6 @@ const MediaContainer: React.FC<{
     }
   }, [media]);
 
-  // Auto-play video when it becomes active
   useEffect(() => {
     if (media._type === 'video' && videoRef.current && isActive) {
       if (isPlaying) {
@@ -142,7 +140,6 @@ const MediaContainer: React.FC<{
     }
   }, [isPlaying, onPlayStateChange]);
 
-  // Auto-pause video when it becomes inactive
   useEffect(() => {
     if (!isActive && media._type === 'video' && videoRef.current) {
       videoRef.current.pause();
@@ -163,14 +160,8 @@ const MediaContainer: React.FC<{
     }
   };
 
-  const handleVideoEnded = () => {
-    setIsPlaying(false);
-  };
-
-  const handleVideoLoaded = () => {
-    setIsVideoReady(true);
-  };
-
+  const handleVideoEnded = () => setIsPlaying(false);
+  const handleVideoLoaded = () => setIsVideoReady(true);
   const handleVideoError = (error: any) => {
     console.error("Video error:", error);
     setIsPlaying(false);
@@ -178,30 +169,39 @@ const MediaContainer: React.FC<{
 
   if (media._type === 'image') {
     return (
+      // FIX: This wrapper must NOT add its own aspect-ratio because the parent
+      // slide already has aspect-[3/4]. Adding another aspect-ratio here causes
+      // the image to overflow on iOS Safari.
       <div
-        className={cn(
-          "relative w-full overflow-hidden rounded-lg bg-gray-100",
-          getAspectRatioClass(aspectRatio),
-          className
-        )}
+        className={cn("relative w-full bg-gray-100", className)}
+        style={{
+          // Fill 100% of the parent's constrained height
+          height: '100%',
+          ...iosSafariOverflowFix,
+        }}
       >
         {imageUrl && (
           <img
             src={imageUrl}
             alt={media.alt || media.title || "Product image"}
-            className={cn(
-              "absolute inset-0 h-full w-full",
-              fit === "contain" && "object-contain",
-              fit === "cover" && "object-cover",
-              fit === "fill" && "object-fill"
-            )}
+            // FIX: Use inline styles instead of Tailwind "absolute inset-0 h-full w-full"
+            // because Tailwind's absolute positioning can behave unexpectedly in
+            // Safari when the parent uses aspect-ratio (not explicit height/width).
             style={{
-              // iOS Safari fix
+              position: 'absolute',
+              inset: 0,
+              width: '100%',
+              height: '100%',
+              // Prevent image from ever being larger than its container on iOS
               maxWidth: '100%',
               maxHeight: '100%',
+              objectFit: fit,
+              display: 'block',
+              // GPU layer helps Safari respect the constraint
+              WebkitTransform: 'translateZ(0)',
+              transform: 'translateZ(0)',
             }}
             loading="lazy"
-            // Add these attributes for better iOS handling
             draggable="false"
           />
         )}
@@ -212,13 +212,12 @@ const MediaContainer: React.FC<{
   // Video rendering
   return (
     <div
-      className={cn(
-        "relative w-full overflow-hidden rounded-lg bg-black",
-        getAspectRatioClass(aspectRatio),
-        className
-      )}
+      className={cn("relative w-full bg-black", className)}
+      style={{
+        height: '100%',
+        ...iosSafariOverflowFix,
+      }}
     >
-      {/* YouTube/Vimeo Embed */}
       {videoSource?.type === 'youtube' && (
         <div className="relative w-full h-full">
           <iframe
@@ -243,7 +242,6 @@ const MediaContainer: React.FC<{
         </div>
       )}
 
-      {/* Video File */}
       {videoSource?.type === 'file' && (
         <div className="relative w-full h-full">
           <video
@@ -259,8 +257,7 @@ const MediaContainer: React.FC<{
             onError={handleVideoError}
             autoPlay={false}
           />
-          
-          {/* Custom Video Controls */}
+
           {showControls && !isFullscreen && (
             <>
               {!isPlaying && (
@@ -274,7 +271,7 @@ const MediaContainer: React.FC<{
                   </div>
                 </button>
               )}
-              
+
               {isPlaying && (
                 <div className="absolute bottom-4 right-4 flex items-center gap-2 z-20">
                   <button
@@ -282,11 +279,7 @@ const MediaContainer: React.FC<{
                     className="bg-white/80 hover:bg-white rounded-full p-2 shadow-md transition-colors"
                     aria-label={isMuted ? "Unmute" : "Mute"}
                   >
-                    {isMuted ? (
-                      <VolumeX className="w-4 h-4" />
-                    ) : (
-                      <Volume2 className="w-4 h-4" />
-                    )}
+                    {isMuted ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
                   </button>
                   <button
                     onClick={togglePlay}
@@ -299,17 +292,13 @@ const MediaContainer: React.FC<{
               )}
             </>
           )}
-          
-          {/* Video Type Indicator */}
+
           <div className="absolute top-4 left-4 z-10">
-            <span className="px-2 py-1 text-xs font-medium bg-black/70 text-white rounded">
-              VIDEO
-            </span>
+            <span className="px-2 py-1 text-xs font-medium bg-black/70 text-white rounded">VIDEO</span>
           </div>
         </div>
       )}
-      
-      {/* Show play button for YouTube/Vimeo when not playing */}
+
       {(videoSource?.type === 'youtube' || videoSource?.type === 'vimeo') && !isPlaying && showControls && !isFullscreen && (
         <button
           onClick={togglePlay}
@@ -329,11 +318,8 @@ const Thumb: React.FC<ThumbPropType> = (props) => {
   const { media, index, onClick, selected } = props;
 
   const getThumbnailUrl = (item: MediaItem) => {
-    if (item._type === 'image') {
-      return item.asset?.url;
-    } else if (item._type === 'video') {
-      return item.poster?.asset?.url || item.asset?.url;
-    }
+    if (item._type === 'image') return item.asset?.url;
+    if (item._type === 'video') return item.poster?.asset?.url || item.asset?.url;
     return '';
   };
 
@@ -352,13 +338,26 @@ const Thumb: React.FC<ThumbPropType> = (props) => {
         className="relative w-full cursor-pointer touch-manipulation appearance-none overflow-hidden rounded border-0 bg-transparent p-0"
         type="button"
       >
-        <div className="relative w-full aspect-square overflow-hidden rounded-lg bg-gray-100">
+        <div
+          className="relative w-full aspect-square bg-gray-100"
+          style={{
+            borderRadius: '0.5rem',
+            ...iosSafariOverflowFix,
+          }}
+        >
           {thumbnailUrl ? (
             <>
               <img
                 src={thumbnailUrl}
                 alt={media.alt || media.title || `Thumbnail ${index + 1}`}
-                className="h-full w-full object-cover"
+                style={{
+                  position: 'absolute',
+                  inset: 0,
+                  width: '100%',
+                  height: '100%',
+                  objectFit: 'cover',
+                  display: 'block',
+                }}
               />
               {media._type === 'video' && (
                 <div className="absolute inset-0 bg-black/30 flex items-center justify-center">
@@ -375,10 +374,9 @@ const Thumb: React.FC<ThumbPropType> = (props) => {
               )}
             </div>
           )}
-          
-          {/* Selected indicator */}
+
           {selected && (
-            <div className="absolute inset-0 border-2 border-black rounded-lg" />
+            <div className="absolute inset-0 border-2 border-black rounded-lg pointer-events-none" />
           )}
         </div>
       </button>
@@ -426,10 +424,7 @@ const MediaCarousel: React.FC<MediaCarouselProps> = ({
   const onThumbClick = useCallback(
     (index: number) => {
       if (!emblaApi) return;
-
-      // Stop video when changing slides
       setIsVideoPlaying(false);
-
       if (isControlled && onSlideChange) {
         onSlideChange(index);
       } else {
@@ -441,78 +436,46 @@ const MediaCarousel: React.FC<MediaCarouselProps> = ({
 
   const onSelect = useCallback(() => {
     if (!emblaApi) return;
-
     const selectedSlideIndex = emblaApi.selectedScrollSnap();
-
-    // Stop video when slide changes
     setIsVideoPlaying(false);
-
     if (!isControlled) {
       setInternalSelectedIndex(selectedSlideIndex);
     } else if (onSlideChange && selectedSlideIndex !== controlledIndex) {
       onSlideChange(selectedSlideIndex);
     }
-  }, [
-    emblaApi,
-    isControlled,
-    onSlideChange,
-    controlledIndex,
-  ]);
+  }, [emblaApi, isControlled, onSlideChange, controlledIndex]);
 
-  // Effect for controlled mode to update carousel position
   useEffect(() => {
-    if (
-      isControlled &&
-      emblaApi &&
-      emblaApi.selectedScrollSnap() !== controlledIndex
-    ) {
+    if (isControlled && emblaApi && emblaApi.selectedScrollSnap() !== controlledIndex) {
       emblaApi.scrollTo(controlledIndex);
     }
   }, [controlledIndex, emblaApi, isControlled]);
 
   useEffect(() => {
     if (!emblaApi) return;
-
     onSelect();
     emblaApi.on("reInit", onSelect);
     emblaApi.on("select", onSelect);
-
     return () => {
       emblaApi.off("reInit", onSelect);
       emblaApi.off("select", onSelect);
     };
   }, [emblaApi, onSelect]);
 
-  // Handle touch events for swipe navigation
   const [touchStart, setTouchStart] = useState<number | null>(null);
   const [touchEnd, setTouchEnd] = useState<number | null>(null);
 
-  const handleTouchStart = (e: React.TouchEvent) => {
-    setTouchStart(e.touches[0].clientX);
-  };
-
-  const handleTouchMove = (e: React.TouchEvent) => {
-    setTouchEnd(e.touches[0].clientX);
-  };
-
+  const handleTouchStart = (e: React.TouchEvent) => setTouchStart(e.touches[0].clientX);
+  const handleTouchMove = (e: React.TouchEvent) => setTouchEnd(e.touches[0].clientX);
   const handleTouchEnd = () => {
     if (!touchStart || !touchEnd) return;
-    
     const distance = touchStart - touchEnd;
-    const isLeftSwipe = distance > 50;
-    const isRightSwipe = distance < -50;
-
-    if (isLeftSwipe && currentIndex < media.length - 1) {
-      onThumbClick(currentIndex + 1);
-    } else if (isRightSwipe && currentIndex > 0) {
-      onThumbClick(currentIndex - 1);
-    }
-
+    if (distance > 50 && currentIndex < media.length - 1) onThumbClick(currentIndex + 1);
+    else if (distance < -50 && currentIndex > 0) onThumbClick(currentIndex - 1);
     setTouchStart(null);
     setTouchEnd(null);
   };
 
-  // Fullscreen dialog for images
   const [isFullscreenOpen, setIsFullscreenOpen] = useState(false);
 
   if (!media || media.length === 0) {
@@ -533,7 +496,7 @@ const MediaCarousel: React.FC<MediaCarouselProps> = ({
       {...props}
     >
       {/* Main Carousel */}
-      <div 
+      <div
         className="w-full relative"
         onTouchStart={handleTouchStart}
         onTouchMove={handleTouchMove}
@@ -551,27 +514,37 @@ const MediaCarousel: React.FC<MediaCarouselProps> = ({
                 role="group"
                 aria-roledescription="slide"
               >
-                <div className="relative aspect-[3/4] rounded-lg overflow-hidden">
+                {/*
+                  FIX: This is the SINGLE source-of-truth for sizing.
+                  aspect-[3/4] here controls the height. MediaContainer MUST NOT
+                  add another aspect-ratio wrapper on top — it just fills this box.
+                  iOS Safari overflows when two nested elements both define aspect-ratio.
+                */}
+                <div
+                  className="relative aspect-[3/4] rounded-lg"
+                  style={iosSafariOverflowFix}
+                >
                   <MediaContainer
                     media={item}
                     fit={imageFit}
-                    aspectRatio={aspectRatio}
+                    // FIX: Don't pass aspectRatio to MediaContainer — the parent
+                    // already controls the dimensions. Passing it caused a double
+                    // aspect-ratio nesting which breaks iOS Safari.
+                    aspectRatio={undefined}
                     showControls={showControls}
-                    className="h-full"
+                    className="absolute inset-0 w-full h-full rounded-lg"
                     isActive={currentIndex === index}
                     onPlayStateChange={(playing) => {
-                      if (currentIndex === index) {
-                        setIsVideoPlaying(playing);
-                      }
+                      if (currentIndex === index) setIsVideoPlaying(playing);
                     }}
                     isFullscreen={false}
                   />
-                  
+
                   {/* Fullscreen trigger for images */}
                   {item._type === 'image' && (
                     <Dialog open={isFullscreenOpen} onOpenChange={setIsFullscreenOpen}>
                       <DialogTrigger asChild>
-                        <button 
+                        <button
                           className="absolute bottom-4 right-4 z-10 bg-black/50 hover:bg-black/70 text-white p-2 rounded-full transition-colors"
                           aria-label="Open image in fullscreen"
                         >
@@ -580,7 +553,7 @@ const MediaCarousel: React.FC<MediaCarouselProps> = ({
                           </svg>
                         </button>
                       </DialogTrigger>
-                      
+
                       <DialogPortal>
                         <DialogOverlay className="fixed inset-0 z-50 bg-black/80" />
                         <DialogContent className="fixed inset-0 z-50 flex items-center justify-center p-0">
@@ -592,11 +565,7 @@ const MediaCarousel: React.FC<MediaCarouselProps> = ({
                           </DialogDescription>
 
                           <div className="relative flex h-screen w-screen items-center justify-center">
-                            <TransformWrapper
-                              initialScale={1}
-                              initialPositionX={0}
-                              initialPositionY={0}
-                            >
+                            <TransformWrapper initialScale={1} initialPositionX={0} initialPositionY={0}>
                               {({ zoomIn, zoomOut }) => (
                                 <>
                                   <TransformComponent>
@@ -638,10 +607,10 @@ const MediaCarousel: React.FC<MediaCarouselProps> = ({
                       </DialogPortal>
                     </Dialog>
                   )}
-                  
+
                   {/* Clickable overlay for peek portions */}
                   {index !== currentIndex && (
-                    <div 
+                    <div
                       className="absolute inset-0 bg-black/0 hover:bg-black/5 transition-all duration-300 cursor-pointer z-10"
                       onClick={() => onThumbClick(index)}
                     />
@@ -689,8 +658,7 @@ const MediaCarousel: React.FC<MediaCarouselProps> = ({
             <span className="ml-2 px-2 py-1 text-xs bg-gray-200 rounded">VIDEO</span>
           )}
         </div>
-        
-        {/* Media Type Indicator */}
+
         <div className="flex items-center gap-2">
           {media.map((_, index) => (
             <button
