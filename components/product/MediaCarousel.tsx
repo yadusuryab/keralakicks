@@ -195,7 +195,14 @@ const MediaContainer: React.FC<{
               fit === "cover" && "object-cover",
               fit === "fill" && "object-fill"
             )}
+            style={{
+              // iOS Safari fix
+              maxWidth: '100%',
+              maxHeight: '100%',
+            }}
             loading="lazy"
+            // Add these attributes for better iOS handling
+            draggable="false"
           />
         )}
       </div>

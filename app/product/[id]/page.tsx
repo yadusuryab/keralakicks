@@ -167,7 +167,7 @@ const ProductPage = async ({ params }: Props) => {
               <MediaCarousel
                 media={product.media || []}
                 imageFit="cover"
-                className="transition-transform object-cover w-full h-full duration-500"
+                className="transition-transform object-cover w-full  h-full duration-500"
               />
             </div>
           </div>
