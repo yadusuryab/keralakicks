@@ -164,11 +164,11 @@ const ProductPage = async ({ params }: Props) => {
           {/* Left Column - Media Carousel */}
           <div className="lg:pr-8">
             <div className="group overflow-hidden bg-[#f4f4f4]">
-              <MediaCarousel
-                media={product.media || []}
-                imageFit="cover"
-                className="transition-transform object-cover w-full  h-full duration-500"
-              />
+            <MediaCarousel
+  media={product.media || []}
+  imageFit="cover"
+  className="w-full"  // Only width, no height or transform classes
+/>
             </div>
           </div>
 
