@@ -44,7 +44,7 @@ const inputCls = (err?: string) =>
    ${err ? "border-red-400 bg-red-50/30" : "border-[#e5e7eb] hover:border-[#9ca3af]"}`;
 
 const OFFER_PRICE    = 1499;
-const OFFER_COD_FEE  = 100;
+const OFFER_COD_FEE  = 350;
 const WHATSAPP_NUMBER = process.env.NEXT_PUBLIC_PHONE ?? "";
 const APP_URL         = process.env.NEXT_PUBLIC_BASE_URL ?? ""; // e.g. https://yourstore.com
 const APP_NAME        = process.env.NEXT_PUBLIC_APP_NAME ?? "Store";
@@ -74,7 +74,7 @@ function CheckoutInner() {
   // ── Pricing ───────────────────────────────────────────────────────────────
   const rawSubtotal = cart.reduce((a, i) => a + i.salesPrice * i.cartQty, 0);
   const subtotal    = isOffer ? OFFER_PRICE : rawSubtotal;
-  const shipping    = paymentMethod === "online" ? 0 : isOffer ? OFFER_COD_FEE : 100;
+  const shipping    = paymentMethod === "online" ? 0 : isOffer ? OFFER_COD_FEE : 350;
   const total       = subtotal + shipping;
 
   const deliveryTime = paymentMethod === "online"
@@ -459,7 +459,7 @@ function CheckoutInner() {
                         <div className="flex items-center justify-between">
                           <span className="text-sm font-medium text-[#111827]">Cash on Delivery</span>
                           <span className="text-xs font-semibold text-[#f59e0b] bg-[#fffbeb] px-2 py-0.5 rounded-full">
-                            +₹{isOffer ? OFFER_COD_FEE : 100} extra
+                            +₹{isOffer ? OFFER_COD_FEE : 350} extra
                           </span>
                         </div>
                         <p className="text-xs text-[#6b7280] mt-0.5">
